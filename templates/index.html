@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Malaria AI Detection</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:linear-gradient(135deg, #f0f9ff, #e0e7ff, #f5e9ff);
+    color:#1e293b;
+}
+.header{
+    padding:20px;
+    text-align:center;
+    font-size:34px;
+    font-weight:bold;
+    background:rgba(79,70,229,0.8);
+    color:white;
+    letter-spacing:1px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    animation:fadeInDown 0.6s ease;
+}
+.container{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+    padding:20px;
+}
+.upload-box,.panel,.card,.recommendation-box{
+    background:linear-gradient(135deg,rgba(173,216,230,0.35),rgba(173,216,230,0.15));
+    padding:15px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    animation:fadeIn 0.6s ease;
+}
+button{
+    margin-top:10px;
+    padding:10px 25px;
+    background:#3b82f6;
+    border:none;
+    border-radius:8px;
+    color:white;
+    font-size:14px;
+    cursor:pointer;
+    transition:0.3s;
+}
+button:hover{background:#2563eb;}
+.custom-file-upload{
+    display:inline-block;
+    padding:10px 25px;
+    background:#10b981;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:bold;
+    transition:0.3s;
+}
+.custom-file-upload:hover{background:#059669;}
+.error-msg{
+    background:#fee2e2;
+    color:#dc2626;
+    padding:10px 15px;
+    border-radius:8px;
+    margin-top:10px;
+    font-weight:bold;
+    border-left:4px solid #dc2626;
+}
+.results{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:15px;
+    overflow:auto;
+    margin-top:15px;
+}
+.card{
+    text-align:center;
+    font-size:13px;
+    transition:transform 0.3s;
+}
+.card:hover{transform:scale(1.05);}
+.card img{
+    width:120px;
+    height:120px;
+    object-fit:cover;
+    border-radius:8px;
+    margin:auto;
+    display:block;
+}
+.infected{color:#dc2626;font-weight:bold;}
+.normal{color:#16a34a;font-weight:bold;}
+.invalid{color:#f59e0b;font-weight:bold;}
+.invalid-msg{font-size:11px;color:#6b7280;margin-top:4px;}
+.right{display:flex;flex-direction:column;gap:20px;}
+canvas{max-height:220px;}
+.recommendation-container{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    text-align:left;
+    animation:fadeInUp 0.7s ease;
+}
+.recommendation-box{flex:1;transition:transform 0.3s;}
+.recommendation-box:hover{transform:scale(1.03);}
+.recommendation-box h4{margin-top:0;font-weight:bold;}
+.infected-box{color:#b91c1c;}
+.normal-box{color:#15803d;}
+@keyframes fadeIn{
+    from{opacity:0;transform:translateY(12px);}
+    to{opacity:1;transform:translateY(0);}
+}
+@keyframes fadeInDown{
+    from{opacity:0;transform:translateY(-12px);}
+    to{opacity:1;transform:translateY(0);}
+}
+@keyframes fadeInUp{
+    from{opacity:0;transform:translateY(12px);}
+    to{opacity:1;transform:translateY(0);}
+}
+</style>
+</head>
+<body>
+<div class="header">🧬 Malaria AI Detection</div>
+<div class="container">
+
+<!-- LEFT SIDE -->
+<div>
+    <div class="upload-box">
+        <form method="POST" enctype="multipart/form-data">
+            <h3>Upload Blood Cell Images</h3>
+            <input type="file" id="fileInput" name="images" multiple required hidden>
+            <label for="fileInput" class="custom-file-upload">📂 Choose Images</label>
+            <br>
+            <button type="submit">Analyze Images</button>
+        </form>
+        {% if error_msg %}
+        <div class="error-msg">{{ error_msg }}</div>
+        {% endif %}
+    </div>
+
+    {% if results %}
+    <div class="results">
+        {% for r in results %}
+        <div class="card">
+            <img src="{{ r.image }}">
+            {% if r.is_invalid %}
+                <div class="invalid">{{ r.label }}</div>
+                <div class="invalid-msg">Blood cell image upload karo</div>
+            {% else %}
+                <div class="{{ 'infected' if r.label=='Malaria Infected' else 'normal' }}">
+                    {{ r.label }}
+                </div>
+                <div>{{ r.confidence }}%</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="panel" style="margin-top:15px;">
+        <h3>Doctor Recommendation</h3>
+        {% if infected > 0 %}
+        <div class="recommendation-container">
+            <div class="recommendation-box infected-box">
+                <h4>Recommended Actions:</h4>
+                <ul>
+                    <li>Visit doctor immediately</li>
+                    <li>Perform malaria blood test</li>
+                    <li>Start anti-malarial treatment</li>
+                </ul>
+            </div>
+            <div class="recommendation-box infected-box">
+                <h4>Suggested Medicines:</h4>
+                <ul>
+                    <li>Artemisinin-based Combination Therapy (ACT)</li>
+                    <li>Chloroquine (if sensitive strain)</li>
+                    <li>Primaquine (for liver stage parasites)</li>
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <div class="recommendation-container">
+            <div class="recommendation-box normal-box">
+                <h4>Status:</h4>
+                <p>✔ No malaria infection detected.</p>
+            </div>
+            <div class="recommendation-box normal-box">
+                <h4>Preventive Tips:</h4>
+                <ul>
+                    <li>Use mosquito nets</li>
+                    <li>Apply repellents</li>
+                    <li>Keep surroundings clean</li>
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- RIGHT SIDE -->
+<div class="right">
+    <div class="panel">
+        <h3>Detection Graph</h3>
+        <canvas id="chart"></canvas>
+    </div>
+    <div class="panel">
+        <h3>Parasite Count Distribution</h3>
+        <canvas id="barChart"></canvas>
+        <p>Total Parasites: {{ total_parasites }}</p>
+    </div>
+</div>
+
+</div>
+<script>
+new Chart(document.getElementById("chart"),{
+    type:"doughnut",
+    data:{
+        labels:["Infected","Normal"],
+        datasets:[{
+            data:[{{ infected }},{{ normal }}],
+            backgroundColor:["#dc2626","#16a34a"]
+        }]
+    }
+});
+new Chart(document.getElementById("barChart"),{
+    type:"bar",
+    data:{
+        labels:["Ring","Trophozoite","Schizont","Gametocyte"],
+        datasets:[{
+            label:"Parasite Count",
+            data:[
+                {{ parasite_counts['Ring'] }},
+                {{ parasite_counts['Trophozoite'] }},
+                {{ parasite_counts['Schizont'] }},
+                {{ parasite_counts['Gametocyte'] }}
+            ],
+            backgroundColor:"#6366f1"
+        }]
+    }
+});
+</script>
+</body>
+</html>
